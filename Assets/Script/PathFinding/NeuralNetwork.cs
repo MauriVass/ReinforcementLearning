@@ -36,8 +36,9 @@ public class NeuralNetwork
 
     public NeuralNetwork()
     {
-
+        //Empty constructor
     }
+    //Create a new neural network object copying an existing one
     public NeuralNetwork(NeuralNetwork nn)
     {
         this.nInput = nn.nInput;
@@ -51,6 +52,7 @@ public class NeuralNetwork
 
         CopyNN(nn.hiddenWeights, nn.outputWeights);
     }
+    //Create a new neural network object passing each parameters
     public NeuralNetwork(int nInput, int nHiddenLayer, int sizeHiddenLayer, int nOutput, float learningRate, float momentum)
     {
         this.nInput = nInput;
@@ -124,14 +126,9 @@ public class NeuralNetwork
             for (int j = 0; j < weight[i].Length; j++)
             {
                 float max = 100f;
-                float r = Random.Range(0f, max) / max;
-                float v =(r - 0.5f);
-                if (i < weight.Length - 1)
-                {
-                    weight[i][j] = v;
-                }
-                else
-                    weight[i][j] = v;
+                //Choose a random value for the weight with only 2 decimal digits
+                float r = Random.Range(-max, max) / max;
+                weight[i][j] = r;
             }
         }
     }
@@ -172,7 +169,7 @@ public class NeuralNetwork
         {
             ForwardPropagate(hiddenWeights[i + 1], hiddenLayer[i], hiddenLayer[i + 1], false);
         }
-        ForwardPropagate(outputWeights, hiddenLayer[hiddenLayer.Length - 1], output, true);//true
+        ForwardPropagate(outputWeights, hiddenLayer[hiddenLayer.Length - 1], output, true);
     }
     public void StepsBackward(float[] targetOutput, float loss = 1)
     {
@@ -308,10 +305,12 @@ public class NeuralNetwork
 
     public float TanH(float input)
     {
-        //Since it's hard to evaluate exp() for large numbers, it's better to check the number's size before evaluate it
+        //Since it's hard to evaluate exp() for large numbers, it's better to check the number before evaluate it
         float maxV = 5f;
+        //If the number is too large return 1
         if (input > maxV)
             return 1;
+        //Same if it is too small
         else if (input < -maxV)
             return -1;
         else

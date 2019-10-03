@@ -5,29 +5,42 @@ using UnityEngine.UI;
 
 public class Platform : MonoBehaviour
 {
+    //Platform Object
+
+    //These tell the nature of each platform is
+    //StartingPoint is the platform from where the agent starts
+    //MaxRewardPoint is the platform with the max reward (Game ends where agent is here)
+    //MinRewardPoint is the platform with some reward (Game does not end where agent is here)
+    //PunishmentPoint is the platform with max negative reward (Game ends where agent is here)
+    //If the platform is not any of these is an 'empty' platform and this can be 0 or some negative reward (Depends on the policy used)
     public bool startingPoint, maxRewardPoint, minRewardPoint, punishmentPoint;
+    //Reward change based on the nature of the platform
     public float reward;
+    //Coordinate position (x,y)
     public Vector2 point;
 
     public Canvas canvas;
+    //Texts to show the qTable value based on the coordinate position
     public Text[] text;
-
+    //Spacing between the each text and the center
     public float minValue;
+
     public Controller controller;
 
+    //Default rewards
     public float maxReward, minReward, punishment, empty;
-    public bool free;
 
     void Start()
     {
-        int v = 10;
+        //Reward multiplier
+        int r = 10;
         //Rewards should be normalized between -1 and 1
         if (controller.DQLearning)
-            v = 1;
-        maxReward = 1 * v;
-        minReward = 0.5f * v;
-        punishment = -1 * v;
-        empty = -0.25f * v;
+            r = 1;
+        maxReward = 1 * r;
+        minReward = 0.5f * r;
+        punishment = -1 * r;
+        empty = -0.25f * r;
 
         if (maxRewardPoint)
             reward = maxReward;
@@ -50,8 +63,6 @@ public class Platform : MonoBehaviour
         text[2].transform.position = transform.position + new Vector3(0, -minValue * factor);
         text[3].transform.position = transform.position + new Vector3(-minValue * factor, 0);
         text[4].enabled = false;
-        if (controller.snake)
-            text[4].enabled = true;
         //text[4].transform.position = transform.position;
         //text[4].text = (point.y * controller.size + point.x).ToString();
 
@@ -64,7 +75,8 @@ public class Platform : MonoBehaviour
     //Not best solution
     void LateUpdate()
     {
-        if (!punishmentPoint && !maxRewardPoint && !controller.snake)//&& !controller.DQLearning
+        //Update text values
+        if (!punishmentPoint && !maxRewardPoint)
         {
             for (int i = 0; i < text.Length-1; i++)
             {
@@ -81,15 +93,6 @@ public class Platform : MonoBehaviour
         else
         {
             canvas.enabled = false;
-        }
-
-        if (controller.snake)
-        {
-            if (!free)
-            {
-                GetComponent<SpriteRenderer>().color = Color.red;
-            }
-            else GetComponent<SpriteRenderer>().color = Color.white;
         }
     }
 

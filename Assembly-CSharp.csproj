@@ -11,7 +11,7 @@
     <ProductVersion>10.0.20506</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <RootNamespace></RootNamespace>
-    <ProjectGuid>{6D8FF2F4-4865-593A-0982-C78C35979009}</ProjectGuid>
+    <ProjectGuid>{4E36AA4F-CE4D-A753-0BAB-5CF2780C3E57}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <AssemblyName>Assembly-CSharp</AssemblyName>
@@ -70,25 +70,25 @@
     <Compile Include="Assets\Script\TestNN\SineFunction.cs" />
     <Compile Include="Assets\Script\TestNN\XORFunction.cs" />
     <Reference Include="Unity.Timeline.Editor">
-      <HintPath>C:/Users/mauri/Desktop/ReinforcementLearning-a7c55564a07c6ca1415276a52063cd6e9487831f/ReinforcementLearning-a7c55564a07c6ca1415276a52063cd6e9487831f/Library/ScriptAssemblies/Unity.Timeline.Editor.dll</HintPath>
+      <HintPath>C:/Users/mauri/Desktop/Mauri/Unity/Projects/ReinforcementLearning/Library/ScriptAssemblies/Unity.Timeline.Editor.dll</HintPath>
     </Reference>
     <Reference Include="Unity.TextMeshPro.Editor">
-      <HintPath>C:/Users/mauri/Desktop/ReinforcementLearning-a7c55564a07c6ca1415276a52063cd6e9487831f/ReinforcementLearning-a7c55564a07c6ca1415276a52063cd6e9487831f/Library/ScriptAssemblies/Unity.TextMeshPro.Editor.dll</HintPath>
+      <HintPath>C:/Users/mauri/Desktop/Mauri/Unity/Projects/ReinforcementLearning/Library/ScriptAssemblies/Unity.TextMeshPro.Editor.dll</HintPath>
     </Reference>
     <Reference Include="Unity.PackageManagerUI.Editor">
-      <HintPath>C:/Users/mauri/Desktop/ReinforcementLearning-a7c55564a07c6ca1415276a52063cd6e9487831f/ReinforcementLearning-a7c55564a07c6ca1415276a52063cd6e9487831f/Library/ScriptAssemblies/Unity.PackageManagerUI.Editor.dll</HintPath>
+      <HintPath>C:/Users/mauri/Desktop/Mauri/Unity/Projects/ReinforcementLearning/Library/ScriptAssemblies/Unity.PackageManagerUI.Editor.dll</HintPath>
     </Reference>
     <Reference Include="Unity.Timeline">
-      <HintPath>C:/Users/mauri/Desktop/ReinforcementLearning-a7c55564a07c6ca1415276a52063cd6e9487831f/ReinforcementLearning-a7c55564a07c6ca1415276a52063cd6e9487831f/Library/ScriptAssemblies/Unity.Timeline.dll</HintPath>
+      <HintPath>C:/Users/mauri/Desktop/Mauri/Unity/Projects/ReinforcementLearning/Library/ScriptAssemblies/Unity.Timeline.dll</HintPath>
     </Reference>
     <Reference Include="Unity.CollabProxy.Editor">
-      <HintPath>C:/Users/mauri/Desktop/ReinforcementLearning-a7c55564a07c6ca1415276a52063cd6e9487831f/ReinforcementLearning-a7c55564a07c6ca1415276a52063cd6e9487831f/Library/ScriptAssemblies/Unity.CollabProxy.Editor.dll</HintPath>
+      <HintPath>C:/Users/mauri/Desktop/Mauri/Unity/Projects/ReinforcementLearning/Library/ScriptAssemblies/Unity.CollabProxy.Editor.dll</HintPath>
     </Reference>
     <Reference Include="Unity.TextMeshPro">
-      <HintPath>C:/Users/mauri/Desktop/ReinforcementLearning-a7c55564a07c6ca1415276a52063cd6e9487831f/ReinforcementLearning-a7c55564a07c6ca1415276a52063cd6e9487831f/Library/ScriptAssemblies/Unity.TextMeshPro.dll</HintPath>
+      <HintPath>C:/Users/mauri/Desktop/Mauri/Unity/Projects/ReinforcementLearning/Library/ScriptAssemblies/Unity.TextMeshPro.dll</HintPath>
     </Reference>
     <Reference Include="Unity.Analytics.DataPrivacy">
-      <HintPath>C:/Users/mauri/Desktop/ReinforcementLearning-a7c55564a07c6ca1415276a52063cd6e9487831f/ReinforcementLearning-a7c55564a07c6ca1415276a52063cd6e9487831f/Library/ScriptAssemblies/Unity.Analytics.DataPrivacy.dll</HintPath>
+      <HintPath>C:/Users/mauri/Desktop/Mauri/Unity/Projects/ReinforcementLearning/Library/ScriptAssemblies/Unity.Analytics.DataPrivacy.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.AIModule">
       <HintPath>C:/Program Files/Unity/Hub/Editor/2019.1.8f1/Editor/Data/Managed/UnityEngine/UnityEngine.AIModule.dll</HintPath>
@@ -274,13 +274,13 @@
       <HintPath>C:/Program Files/Unity/Hub/Editor/2019.1.8f1/Editor/Data/UnityExtensions/Unity/TestRunner/net35/unity-custom/nunit.framework.dll</HintPath>
     </Reference>
     <Reference Include="Unity.Analytics.Editor">
-      <HintPath>C:/Users/mauri/Desktop/ReinforcementLearning-a7c55564a07c6ca1415276a52063cd6e9487831f/ReinforcementLearning-a7c55564a07c6ca1415276a52063cd6e9487831f/Library/PackageCache/com.unity.analytics@3.3.2/Unity.Analytics.Editor.dll</HintPath>
+      <HintPath>C:/Users/mauri/Desktop/Mauri/Unity/Projects/ReinforcementLearning/Library/PackageCache/com.unity.analytics@3.3.2/Unity.Analytics.Editor.dll</HintPath>
     </Reference>
     <Reference Include="Unity.Analytics.StandardEvents">
-      <HintPath>C:/Users/mauri/Desktop/ReinforcementLearning-a7c55564a07c6ca1415276a52063cd6e9487831f/ReinforcementLearning-a7c55564a07c6ca1415276a52063cd6e9487831f/Library/PackageCache/com.unity.analytics@3.3.2/Unity.Analytics.StandardEvents.dll</HintPath>
+      <HintPath>C:/Users/mauri/Desktop/Mauri/Unity/Projects/ReinforcementLearning/Library/PackageCache/com.unity.analytics@3.3.2/Unity.Analytics.StandardEvents.dll</HintPath>
     </Reference>
     <Reference Include="Unity.Analytics.Tracker">
-      <HintPath>C:/Users/mauri/Desktop/ReinforcementLearning-a7c55564a07c6ca1415276a52063cd6e9487831f/ReinforcementLearning-a7c55564a07c6ca1415276a52063cd6e9487831f/Library/PackageCache/com.unity.analytics@3.3.2/Unity.Analytics.Tracker.dll</HintPath>
+      <HintPath>C:/Users/mauri/Desktop/Mauri/Unity/Projects/ReinforcementLearning/Library/PackageCache/com.unity.analytics@3.3.2/Unity.Analytics.Tracker.dll</HintPath>
     </Reference>
     <Reference Include="netstandard">
       <HintPath>C:/Program Files/Unity/Hub/Editor/2019.1.8f1/Editor/Data/NetStandard/ref/2.0.0/netstandard.dll</HintPath>

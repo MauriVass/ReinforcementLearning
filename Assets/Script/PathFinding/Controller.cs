@@ -79,21 +79,10 @@ public class Experience
     public bool EndState { get => endState; set => endState = value; }
 }
 
-static class SnakeState
-{
-    static public int nState = 6;
-
-    //1->presence, 0->no presence
-
-    //Chech if in the r,l,f positions there are obstacles (end of box, snake's body)
-    static public int obstacleRight, obstacleLeft, obstacleForward;
-
-    //Position of the food
-    static public int foodRight, foodLeft, foodForward;
-}
-
 public class Controller : MonoBehaviour
 {
+    /*This script controlls the action of the agent*/
+
     int epoch, steps, maxSteps;
 
     //Box's side length
@@ -112,7 +101,8 @@ public class Controller : MonoBehaviour
     Platform currentPlatform, previousPlatform;
 
     //Used to determine the end of an episode
-    public bool pause;
+    [HideInInspector]
+    public bool end;
 
     public GameObject agentPrefab;
     GameObject agent;
@@ -135,16 +125,11 @@ public class Controller : MonoBehaviour
     float rateAveraging;
     bool startLearning;
 
-    //For Snake
-    Dictionary<int[], float[]> snakeQtable;
-    public bool snake;
-    float distance;
-    public bool eatFood, spawnedHead;
-    int snakeState;
-
     //Used to have some waiting time between actions
     float timer, maxTimer;
     
+    //Used to start learning after game started (Press key A)
+    bool canStart;
 
     // Start is called before the first frame update
     void Start()
@@ -152,7 +137,7 @@ public class Controller : MonoBehaviour
         Starting();
     }
 
-    bool canStart;
+
     // Update is called once per frame
     void Update()
     {
@@ -162,7 +147,7 @@ public class Controller : MonoBehaviour
             maxTimer = 1.1f + slider.value;
 
             timer += Time.deltaTime;
-            if (!pause)
+            if (!end)
             {
                 if (timer > maxTimer)
                 {
@@ -206,26 +191,18 @@ public class Controller : MonoBehaviour
     public void Starting()
     {
         //size = 5; //it is changed in PlatformGenerator class
-        if (!snake)
-        {
-            agent = Instantiate(agentPrefab, new Vector2(-999, -999), Quaternion.identity);
-        }
+        agent = Instantiate(agentPrefab, new Vector2(-999, -999), Quaternion.identity);
+        
         epsilon = 1f;
         minEplison = 0.1f;
         epsilonDecay = 0.01f/size;
         learningRate = 0.8f;
         discountRate = 0.9f;
-        //More than 2 times the diagonal'length (sqrt(2)*size ~= 1.4*size)
+        //More than 2 times the diagonal length (sqrt(2)*size ~= 1.4*size)
         maxSteps = size * 3;
 
         //Create QTable: rows are the states (size * size) and columns are the actions
-        if (snake)
-        {
-            snakeQtable = new Dictionary<int[], float[]>();
-            InizializeQTableSnake();
-        }
-        else
-            qTable = new float[size * size, Action.nAction];
+        qTable = new float[size * size, Action.nAction];
 
         //Q-Learning
         if (DQLearning)
@@ -251,17 +228,11 @@ public class Controller : MonoBehaviour
         if(minRewardPlatform)
             minRewardPlatform.EnableMinReward();
         Vector3 pos = agentStartingPlatform.transform.position + Vector3.back;
-        if (!snake)
-            agent.transform.position = pos;
-        else
-        {
-            agent.transform.position = Vector3.back;
-            agentStartingPlatform.free = false;
-        }
+        agent.transform.position = pos;
         currentPlatform = agentStartingPlatform;
         previousPlatform = null;
 
-        pause = false;
+        end = false;
 
         timer = 0;
         maxTimer = 1f;
@@ -270,57 +241,31 @@ public class Controller : MonoBehaviour
         epoch++;
     }
     
-    void InizializeQTableSnake()
-    {
-        float[] value = new float[Action.nAction];
-
-        for (int i = 0; i < 2; i++)
-        {
-            for (int j = 0; j < 2; j++)
-            {
-                for (int k = 0; k < 2; k++)
-                {
-                    for (int l = 0; l < 2; l++)
-                    {
-                        for (int m = 0; m < 2; m++)
-                        {
-                            for (int n = 0; n < 2; n++)
-                            {
-                                snakeQtable.Add(new int[] { i, j, k, l, m, n },value);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
     
-
     Vector2 ChooseAction()
     {
+        //Choose a random number n between 0 and 1
         float n = Random.Range(0f,1f);
         Vector2 action = new Vector2(-1,-1);
         if (n < epsilon)
         {
+            //If n is less than the epsilon value choose a random action
             action = Action.ChooseRandomAction();
             epsilon = epsilon > minEplison ? epsilon - epsilonDecay : minEplison;
             print("Random Action Chosen: " + action);
         }
         else
         {
+            //Otherwise choose an action based on the max value in the QTable based on the current state
             float maxValue = -999;
             FindMaxValue((int)(agentPosition.x + agentPosition.y * size), out action, out maxValue);
-            //Since an optimal action was not found, choose a random one
-            //It may happen that some actions are never choosen (There should be a check if all the value's actions a 0 then..)
-            //if (maxValue == 0)
-            //    action = Action.ChooseRandomAction();
             print("Action Chosen: " + action);
         }
 
         steps++;
         if (steps>maxSteps)
         {
-            pause = true;
+            end = true;
         }
         return action;
     }
@@ -345,40 +290,11 @@ public class Controller : MonoBehaviour
         steps++;
         if (steps > maxSteps)
         {
-            pause = true;
+            end = true;
         }
         return action;
     }
-    int ChooseActionSnake(int[] state)
-    {
-        float n = Random.Range(0f, 1f);
-        int action = -1;
-        if (n < epsilon)
-        {
-            //Select an action between 0 and 3 (0->f, 1->r, 2->d, 3->l)
-            action = Random.Range(0,3);
-            epsilon = epsilon > minEplison ? epsilon - epsilonDecay : minEplison;
-            print("Random Action Chosen: " + action);
-        }
-        else
-        {
-            float maxValue = -999;
-            FindMaxValueSnake(state, out action, out maxValue);
-            //Since an optimal action was not found, choose a random one
-            //It may happen that some actions are never choosen (There should be a check if all the value's actions a 0 then..)
-            //if (maxValue == 0)
-            //    action = Action.ChooseRandomAction();
-            print("Action Chosen: " + action + " value: " + maxValue);
-        }
-
-        steps++;
-        if (steps > maxSteps)
-        {
-            pause = true;
-        }
-        return action;
-    }
-
+    
     void FindMaxValue(int index, out Vector2 action, out float maxValue)
     {
         maxValue = -999;
@@ -419,37 +335,7 @@ public class Controller : MonoBehaviour
 
         action = Action.GetVectorByIndex(indexAction);
     }
-    void FindMaxValueSnake(int[] index, out int action, out float maxValue)
-    {
-        maxValue = -999;
-        int indexAction = -1;
-        
-        float[] values = new float[Action.nAction];
-        
-        //snakeQtable.TryGetValue(index,out values);
-        int counter = 0;
-        foreach (int[] item in snakeQtable.Keys)
-        {
-            if (Enumerable.SequenceEqual(item,index))
-            {
-                values = snakeQtable.ElementAt(counter).Value;
-            }
-            counter++;
-        }
-        //values = snakeQtable.Where((k,v) => Enumerable.SequenceEqual(k, index));
-
-        for (int i = 0; i < values.Length; i++)
-        {
-            if (maxValue < values[i])
-            {
-                maxValue = values[i];
-                indexAction = i;
-            }
-        }
-
-        action = indexAction;
-    }
-
+    
     bool checkIndexBoundaries(int x, int y)
     {
         if (x >= 0 && x < platforms.GetLength(0) && y >= 0 && y < platforms.GetLength(1))
@@ -491,7 +377,7 @@ public class Controller : MonoBehaviour
         else
         {
             //Out of the platform boundaries
-            pause = true;
+            end = true;
 
             reward = -10;
             maxNextValue = 0;
@@ -502,8 +388,8 @@ public class Controller : MonoBehaviour
         float oldQvalue = qTable[curretStateIndex, indexAction];
         //Bellman Equation
         qTable[curretStateIndex, indexAction] = oldQvalue + learningRate * (reward + discountRate * maxNextValue - oldQvalue);
-        pause = pause ? pause : currentPlatform.CheckGameState();
-        print(oldQvalue + " " + qTable[curretStateIndex, indexAction]);
+        end = end ? end : currentPlatform.CheckGameState();
+        print($"OldValue: {oldQvalue}, New Value: {qTable[curretStateIndex, indexAction]}");
     }
     void PerformActionDeepQ(Vector2 action)
     {
@@ -535,7 +421,7 @@ public class Controller : MonoBehaviour
         else
         {
             //Out of the platform boundaries
-            pause = true;
+            end = true;
 
             if (DQLearning)
                 reward = -1;
@@ -547,7 +433,7 @@ public class Controller : MonoBehaviour
         }
         
         //Create new Experience
-        Experience e = new Experience(curretStateIndex,indexAction,reward,nextStateIndex,pause);
+        Experience e = new Experience(curretStateIndex,indexAction,reward,nextStateIndex,end);
         //Save Experience in the ReplayMemory (also overwritting the existining ones)
         replayMemory[indexExperience % sizeReplayMemory] = e;
         indexExperience++;
@@ -623,7 +509,7 @@ public class Controller : MonoBehaviour
             }
         }
 
-        pause = pause ? pause : currentPlatform.CheckGameState();
+        end = end ? end : currentPlatform.CheckGameState();
         //print(oldQvalue + " " + qTable[curretStateIndex, indexAction]);
     }
 
@@ -631,10 +517,10 @@ public class Controller : MonoBehaviour
     {
         agentPosition += action;
         Platform platform = platforms[(int)agentPosition.x, (int)agentPosition.y];
-        pause = platform.CheckGameState();
+        end = platform.CheckGameState();
     }
 
-    //Debug
+    //Debug. Print QTable
     //private void OnGUI()
     //{
     //    for (int i = 0; i < 4; i++)
