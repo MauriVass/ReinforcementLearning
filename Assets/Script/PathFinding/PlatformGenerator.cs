@@ -8,17 +8,20 @@ public class PlatformGenerator : MonoBehaviour
     //These script create all the platforms
 
     //Length and width of the playground
+    [HideInInspector]
     public int n, m;
 
     //Platform's prefab
-    public GameObject platform;
+    public GameObject[] platformPrefabs;
+    int index;
 
     //The container of all the platforms
     GameObject container;
 
     Vector2 platformStartingPoint;
 
-    //Platform side's size
+    //Single platform side size
+    [HideInInspector]
     public float minValue;
 
     Platform[,] platforms;
@@ -30,29 +33,45 @@ public class PlatformGenerator : MonoBehaviour
     public Controller controller;
 
     public Vector2 off;
-    void Start()
-    {
-        controller.size = 5;
-        n = controller.size;
-        m = controller.size;
+    void Start() {
+        index = ManagerScenes.isSquare ? 0 : 1;
+        n = ManagerScenes.x;
+        m = ManagerScenes.y;
+
+        print($"/// Starting PlatformGenerator with index:{index}, n:{n}, m:{m} ///");
+
+        controller.n = n;
+        controller.m = m;
         platforms = new Platform[n, m];
         container = gameObject;
-        platform.transform.localScale = Vector3.one * 1.5f * 1.01f;
-        minValue = platform.transform.localScale.x;
-
+        minValue = 1.5f * 1.01f;
 
         int x;
         int y;
 
         platformStartingPoint = new Vector2(Camera.main.ScreenToWorldPoint(Vector3.left).x, Camera.main.ScreenToWorldPoint(Vector3.down).y) + Vector2.one * minValue / 2;
         //Generate platform of size nXm and populate the tha platforms array
-        for (int i = 0; i < m; i++)//Columns
+        for (y = 0; y < m; y++)//Columns
         {
-            for (int j = 0; j < n; j++)//Rows
+            for (x = 0; x < n; x++)//Rows
             {
-                x = j;
-                y = i;
-                GameObject tmp = Instantiate(platform, platformStartingPoint + new Vector2(x, y) * (minValue * 1.05f), Quaternion.identity);
+                GameObject tmp;
+                if (index == 0)
+                {
+                    platformPrefabs[index].transform.localScale = Vector3.one * minValue;
+                    tmp = Instantiate(platformPrefabs[index], platformStartingPoint + new Vector2(x, y) * (minValue * 1.05f), Quaternion.identity);
+                }
+                else
+                {
+                    //Set the right position for the hexagones
+                    float a = y % 2 == 0 ? 2 * x : 2 * x + 1;
+
+                    //A value to make some space between the platforms
+                    float v = 1.1f;
+                    float w = platformPrefabs[index].transform.localScale.x * 3 / 4.0f * v;
+                    float h = platformPrefabs[index].transform.localScale.x * Mathf.Sqrt(3) / 4.0f * v;
+                    tmp = Instantiate(platformPrefabs[index], platformStartingPoint + new Vector2(a * w, y * h), Quaternion.Euler(0, 0, 90));
+                }
                 tmp.name = "Platform (" + x + "," + y + ")";
                 tmp.transform.SetParent(container.transform);
                 Platform p = tmp.GetComponent<Platform>();
@@ -89,8 +108,8 @@ public class PlatformGenerator : MonoBehaviour
         //controller.minRewardPlatform = platforms[x, y];
 
 
-        //Choose obstacles' position (10% of obstacles)
-        for (int i = 0; i < (n * m / 10); i++)
+        //Choose obstacles' position (15% of obstacles)
+        for (int i = 0; i < (n * m * 0.15f); i++)
         {
             do
             {
