@@ -23,7 +23,7 @@ public class Menu : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        
+
     }
 
     public void SetIsSquare(bool value)
@@ -42,12 +42,12 @@ public class Menu : MonoBehaviour
     {
         for (int i = 0; i < buttonMode.Length; i++)
             buttonMode[i].GetComponent<Image>().color = new Color32(0, 120, 160, 255);
-        if (value)
+        if (!value)
             buttonMode[0].GetComponent<Image>().color = new Color32(0, 183, 255, 255);
         else
             buttonMode[1].GetComponent<Image>().color = new Color32(0, 183, 255, 255);
-
-        ManagerScenes.isDeepQN = value;
+        //Todo
+        ManagerScenes.isDeepQN = !value;
     }
 
     public void SetX()

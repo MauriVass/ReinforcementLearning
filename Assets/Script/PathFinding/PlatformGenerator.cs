@@ -96,6 +96,7 @@ public class PlatformGenerator : MonoBehaviour
         }
         while (checkPlatfromFree(new Vector2(x, y)));
         platforms[x, y].SetMaxRewardPoint();
+        maxRewardPoint = platforms[x, y];
 
         //Select one random platform to be the place of the min reward
         //do
@@ -108,8 +109,8 @@ public class PlatformGenerator : MonoBehaviour
         //controller.minRewardPlatform = platforms[x, y];
 
 
-        //Choose obstacles' position (15% of obstacles)
-        for (int i = 0; i < (n * m * 0.15f); i++)
+        //Choose obstacles' position (25% of obstacles)
+        for (int i = 0; i < (n * m * 0.25f); i++)
         {
             do
             {
@@ -124,6 +125,7 @@ public class PlatformGenerator : MonoBehaviour
 
         controller.platforms = platforms;
         controller.agentStartingPlatform = agentStartingPoint;
+        controller.maxRewardPlatform = maxRewardPoint;
 
 
         gameObject.transform.Translate(off);

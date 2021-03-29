@@ -20,11 +20,11 @@ public class SineFunction : MonoBehaviour
         training = 17;
         inputNeuron = 1;
         nHiddenLayer = 1;
-        hiddenNeuron = 17;
+        hiddenNeuron = 10;
         outputNeuron = 1;
         
-        learningRate = 0.3f;
-        momentum = 0.6f;
+        learningRate = 0.05f;
+        momentum = 0.9f;
         maxError = 0.018f;
         error = 999;
 
