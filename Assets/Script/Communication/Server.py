@@ -7,23 +7,31 @@ import tensorflow as tf
 class Network():
 	def __init__(self,a):
 		self.a = a
+		self.actions = 4
 		self.model = tf.keras.Sequential([
-							tf.keras.layers.Dense(128, activation='relu'),
-							tf.keras.layers.Dense(10)
+							tf.keras.layers.Flatten(),
+							tf.keras.layers.Dense(8, activation='relu'),
+                            tf.keras.layers.Dense(64, activation='relu'),
+                            tf.keras.layers.Dense(64, activation='relu'),
+							tf.keras.layers.Dense(self.actions)
 						])
 
 		self.model.compile(optimizer='adam',
-              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-              metrics=['accuracy'])
-
+              loss=['mae'],
+              metrics=['mae'])
+		#print(self.model.summary())
 
 
 	def fit(self, input, target):
-		#output = model.fit(train_images, train_labels, epochs=10)
-		return self.a
+		input = tf.constant(input, shape=(1,self.actions+4))
+		output = self.model.fit(input, target, epochs=1)
+		return output[0]
 
 	def predict(self, input):
-		return 'predict' + self.a
+		input = tf.constant(input, shape=(1,self.actions+4))
+		output = self.model.predict(input)
+		return output[0]
+
 
 class CalculatorWebService(object):
 	#Required to be accessable online
@@ -32,7 +40,6 @@ class CalculatorWebService(object):
 	def __init__(self):
 		self.net = Network('1.0')
 
-	#@cherrypy.expose
 	def FIT(self):
 		msg = cherrypy.request.body.readline().decode("utf-8")
 		print(msg)
@@ -40,10 +47,13 @@ class CalculatorWebService(object):
 		output = b
 		return output
 
-	def PREDICT(self,*path,**query):
-		msg = cherrypy.request.body.read()
-		output = net.predict() + msg
-		return output
+	def PREDICT(self):
+		msg = cherrypy.request.body.readline().decode("utf-8")
+		input = np.array(arr.split('.')).astype(int)
+		output = self.net.predict(input)
+		out = '.'.join([str(o) for o in output])
+		print(out, np.shape(out))
+		return out
 
 	def GET(self,*path,**query):
 		output = 'Get'

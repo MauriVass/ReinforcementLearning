@@ -46,7 +46,8 @@ public class Controller : MonoBehaviour
     float timer, maxTimer;
 
     //Used to start learning after game started (Press key S)
-    bool canStart;
+    //todo
+    bool canStart = true;
 
     void Start()
     {
