@@ -38,7 +38,7 @@ public class PlatformGenerator : MonoBehaviour
         n = ManagerScenes.x;
         m = ManagerScenes.y;
 
-        print($"/// Starting PlatformGenerator with index:{index}, n:{n}, m:{m} ///");
+        print($"/// Starting PlatformGenerator with n:{n}, m:{m} ///");
 
         controller.n = n;
         controller.m = m;

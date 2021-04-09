@@ -170,8 +170,7 @@ public class AgentDQL : MonoBehaviour
 		else
 		{
 			///Remote Neural Network
-			output = client.fit(input);
-			print(output);
+			output = client.predict(input,true);
 		}
 
 		for (int i = 0; i < controller.nActions; i++)
@@ -259,53 +258,58 @@ public class AgentDQL : MonoBehaviour
 			float error = 0;
 			for (int i = 0; i < batchExperiences.Count; i++)
 			{
-				//Pass the current state through the Policy Network
-				currentState = batchExperiences[i].State;
-				policyNetwork.StepsForward(currentState);
-				//Get the output given the choosen Action
-				int currentAction = batchExperiences[i].Action;
-				float currentQValue = policyNetwork.GetOutputByActionIndex(currentAction);
+				if (useLocalNN)
+				{
+					//Pass the current state through the Policy Network
+					currentState = batchExperiences[i].State;
+					policyNetwork.StepsForward(currentState);
+					//Get the output given the choosen Action
+					int currentAction = batchExperiences[i].Action;
+					float currentQValue = policyNetwork.GetOutputByActionIndex(currentAction);
 
-				//Pass the next state through the Target Network
-				nextState = batchExperiences[i].NextState;
-				targetNetwork.StepsForward(nextState);
-				//Get the max output
-				float nextQValue = targetNetwork.GetMaxOutput();
+					//Pass the next state through the Target Network
+					nextState = batchExperiences[i].NextState;
+					targetNetwork.StepsForward(nextState);
+					//Get the max output
+					float nextQValue = targetNetwork.GetMaxOutput();
 
-				//Calculate the loss between the choosen Action and the best one
-				float theta = batchExperiences[i].EndState ? batchExperiences[i].Reward : batchExperiences[i].Reward + controller.discountRate * nextQValue;
-				float loss = 0.5f * Mathf.Pow(theta - currentQValue, 2) / batchExperiences.Count;
-				error += loss;
+					//Calculate the loss between the choosen Action and the best one
+					float theta = batchExperiences[i].EndState ? batchExperiences[i].Reward : batchExperiences[i].Reward + controller.discountRate * nextQValue;
+					float loss = 0.5f * Mathf.Pow(theta - currentQValue, 2) / batchExperiences.Count;
+					error += loss;
 
-				//BackPropagate error and update weights
-				policyNetwork.StepsBackward(targetNetwork.getOutput());//targetNetwork.getOutput()
-
+					//BackPropagate error and update weights
+					policyNetwork.StepsBackward(targetNetwork.getOutput());//targetNetwork.getOutput()
+				}
+				else
+				{
+					client.fit(batchExperiences[i]);
+				}
 			}
-			//Back propagate error to Policy Network
-			print("Loss: " + error);
-
-			/*for (int j = 0; j < 4; j++)
-			{
-				print("Actual: " + policyNetwork.getOutput()[j] + " Target: " + targetNetwork.getOutput()[j] + " diff: " + (targetNetwork.getOutput()[j]-policyNetwork.getOutput()[j]));
-			}*/
 
 			//Upadate Target Network weights
 			counterTargetNet++;
 			if (counterTargetNet > updateTargetNet && startLearning)
 			{
-				//Update Target Net weights with the Policy Net ones
-				//Instead of changing each weights and biases
-				//It is faster (and the same) to make the 2 Nets equals
-				//DO NOT USE
-				//targetNetwork = policyNetwork;
+				if (useLocalNN)
+				{
+					//Update Target Net weights with the Policy Net ones
+					//Instead of changing each weights and biases
+					//It is faster (and the same) to make the 2 Nets equals
+					//DO NOT USE
+					//targetNetwork = policyNetwork;
 
-				//It seem to give problem with the method above, so use this method
-				targetNetwork.CopyNN(policyNetwork.hiddenWeights, policyNetwork.outputWeights);
+					//It seem to give problem with the method above, so use this method
+					targetNetwork.CopyNN(policyNetwork.hiddenWeights, policyNetwork.outputWeights);
 
+                }
+                else
+                {
+					client.copyNN();
+                }
 				counterTargetNet = 0;
 			}
 		}
-
 	}
 
 
