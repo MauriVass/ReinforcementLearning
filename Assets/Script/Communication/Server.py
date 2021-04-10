@@ -7,17 +7,19 @@ import tensorflow as tf
 class Network():
 	def __init__(self):
 		self.actions = 4
-		self.num_outputs = self.actions + 4
+		self.num_inputs = self.actions + 4
 		self.batchsize = 64
 		self.discount_rate = 0.75
+		self.lr = 0.001
+		self.optimizer = tf.optimizers.Adam(self.lr)
 		
 		self.experience = {'s': [], 'a': [], 'r': [], 'ns': [], 'done': []}
 		self.counter = 0
 
 		self.policyNetwork = self.ModelTemplate()
-		self.policyNetwork.compile(optimizer='adam',
-				loss=['mae'],
-				metrics=['mae'])
+		# self.policyNetwork.compile(optimizer=self.optimizer,
+		# 		loss=['mae'],
+		# 		metrics=['mae'])
 
 		self.targetNetwork = self.ModelTemplate()
 		self.copyNN()
@@ -26,60 +28,68 @@ class Network():
 	def ModelTemplate(self):
 			model = tf.keras.Sequential([
 							tf.keras.layers.Flatten(),
-							tf.keras.layers.Dense(8, activation='relu'),
+							tf.keras.layers.Dense(64, activation='relu'),
 							tf.keras.layers.Dense(64, activation='relu'),
 							tf.keras.layers.Dense(64, activation='relu'),
 							tf.keras.layers.Dense(self.actions)
 						])
-			model.build(input_shape=(1,self.num_outputs))			
+			model.build(input_shape=(1,self.num_inputs))			
 			return model
 
 	def fit(self, exp):
 		self.counter += 1
-		if len(self.experience['s']) >= self.batchsize:
-			for key in self.experience.keys():
-				self.experience[key].pop(0)
 		for key, value in exp.items():
 			self.experience[key].append(value)
 			
 		if(self.counter==self.batchsize):
-			self.counter=0
-
-			states = np.asarray(self.experience['s'])
-			actions = np.asarray(self.experience['a'])
-			rewards = np.asarray(self.experience['r'])
-			next_states = np.asarray(self.experience['ns'])
-			dones = np.asarray(self.experience['done'])
-			value_next = np.max(self.predictTN(next_states), axis=1)
+			states = tf.convert_to_tensor(self.experience['s']) #The current state
+			actions = np.asarray(self.experience['a']) #The action performed (chosen randomly or by net)
+			rewards = np.asarray(self.experience['r']) #The reward got
+			next_states = tf.convert_to_tensor(self.experience['ns']) #The next state
+			dones = np.asarray(self.experience['done']) #State of the game (ended or not)
+			# print(type(next_states), np.shape(next_states), next_states)
+			#value_next = np.max(self.predictTN(next_states),axis=1) #Max next values according to the Target Network
+			value_next = np.max(self.targetNetwork(next_states),axis=1) #Max next values according to the Target Network
+			
+			# print('oj')
+			# print(type(rewards), rewards.shape,rewards)
+			# print(type(value_next), value_next.shape, value_next)
 			actual_values = np.where(dones, rewards, rewards+self.discount_rate*value_next)
 
 			with tf.GradientTape() as tape:
-				selected_action_values = tf.math.reduce_sum(
-					self.predict(states) * tf.one_hot(actions, self.num_actions), axis=1)
+				# print(type(states), states.shape, states)
+				tape.watch(states)
+				a = self.policyNetwork(states) * tf.one_hot(actions, self.actions)
+				selected_action_values = tf.math.reduce_sum(a , axis=1)
+				# print('partial', type(a), a.shape, a)
+				# print('final', type(selected_action_values), selected_action_values.shape, selected_action_values)
 				loss = tf.math.reduce_mean(tf.square(actual_values - selected_action_values))
+				tape.watch(loss)
 
-			variables = self.policyNetwork.trainable_variables
+
+			variables = self.policyNetwork.trainable_variables			
 			gradients = tape.gradient(loss, variables)
+			# print('loss', type(loss), loss)
+			# print(type(variables), np.array(variables).shape)
+			# print('wv', tape.watched_variables())
+			# print(type(gradients), np.array(gradients).shape)
+			# print(gradients)
+        
 			self.optimizer.apply_gradients(zip(gradients, variables))
+
+			self.counter=0
+			self.experience = {'s': [], 'a': [], 'r': [], 'ns': [], 'done': []}
 
 			return loss		
 
 	def predictPN(self, input):
-		input = tf.constant(input, shape=(1,self.num_outputs))
-		output = self.policyNetwork.predict(input)
-		return output[0]
+		return self.policyNetwork(np.atleast_2d(input))
 
 	def predictTN(self, input):
-		out = []
-		for i in input:
-			input = tf.constant(i, shape=(1,self.num_outputs))
-			output = self.targetNetwork.predict(i)
-			out.append(output[0])
-		return out
+		return self.targetNetwork(np.atleast_2d(input))
 	
 	def copyNN(self):
 		self.targetNetwork.set_weights(self.policyNetwork.get_weights())
-
 
 
 class CalculatorWebService(object):
@@ -98,14 +108,15 @@ class CalculatorWebService(object):
 		msg = cherrypy.request.body.readline().decode("utf-8")
 		input = np.array(msg.split('.')).astype(int)
 		output = self.net.predictPN(input)
-		out = '.'.join([str(o) for o in output])
-		print('pn', out, np.shape(out))
+		out = '.'.join([str(o) for o in output.numpy()[0]])
+		#out = out.strip()[1:-1]
+		#print('pn', out, np.shape(out))
 		return out
 
 	def PREDICT_TN(self):
 		output = self.net.predictTN(values[0])
 		out = '.'.join([str(o) for o in output])
-		print('tn', out, np.shape(out))
+		#print('tn', out, np.shape(out))
 		return out
 
 	def COPY_NN(self):
@@ -113,10 +124,10 @@ class CalculatorWebService(object):
 
 	def decodeMsg(self, msg):
 		values = msg.split(',')
-		#print(3, values, type(values), msg)
-		currentstate = np.array(values[0].split('.')).astype(int)
+
+		currentstate = tf.Variable([np.array(values[0].split('.'), dtype=np.int8)])
 		action = int(values[1])
-		nextstate = np.array(values[2].split('.')).astype(int)
+		nextstate = tf.Variable([np.array(values[2].split('.'), dtype=np.int8)])
 		reward = float(values[3])
 		endstate = bool(values[4])
 

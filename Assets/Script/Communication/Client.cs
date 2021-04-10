@@ -74,7 +74,7 @@ public class Client
         }
         else
         {
-            print(uwr.downloadHandler.text);
+            //print(uwr.downloadHandler.text);
             var output = Array.ConvertAll(uwr.downloadHandler.text.Split('.'), s => float.Parse(s));
             return output;
             //Debug.Log("Received: " + uwr.downloadHandler.text);
