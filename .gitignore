@@ -4,3 +4,5 @@ Packages
 Library/*
 Temp
 .vs
+.vscode
+.csproj
