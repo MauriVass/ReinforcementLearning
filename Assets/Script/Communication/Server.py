@@ -3,14 +3,17 @@ import cherrypy
 import json
 import numpy as np
 import tensorflow as tf
+import time
 
 class Network():
 	def __init__(self):
-		self.actions = 4
-		self.num_inputs = self.actions + 4
-		self.batchsize = 64
+		self.num_actions = 4
+		#4 adjacent blocks + 4 reward point directions
+		self.num_inputs = 4 + 4
+		self.batchsize = 16
 		self.discount_rate = 0.75
-		self.lr = 0.001
+		self.lr = 0.01
+		self.gamma = 0.99
 		self.optimizer = tf.optimizers.Adam(self.lr)
 		
 		self.experience = {'s': [], 'a': [], 'r': [], 'ns': [], 'done': []}
@@ -28,10 +31,10 @@ class Network():
 	def ModelTemplate(self):
 			model = tf.keras.Sequential([
 							tf.keras.layers.Flatten(),
-							tf.keras.layers.Dense(64, activation='relu'),
-							tf.keras.layers.Dense(64, activation='relu'),
-							tf.keras.layers.Dense(64, activation='relu'),
-							tf.keras.layers.Dense(self.actions)
+							# tf.keras.layers.Dense(64, activation='relu'),
+							# tf.keras.layers.Dense(64, activation='relu'),
+							tf.keras.layers.Dense(128, activation='tanh', kernel_initializer='RandomNormal'),
+							tf.keras.layers.Dense(self.num_actions, activation='softmax', kernel_initializer='RandomNormal')
 						])
 			model.build(input_shape=(1,self.num_inputs))			
 			return model
@@ -40,47 +43,51 @@ class Network():
 		self.counter += 1
 		for key, value in exp.items():
 			self.experience[key].append(value)
-			
+		
 		if(self.counter==self.batchsize):
-			states = tf.convert_to_tensor(self.experience['s']) #The current state
+			states = tf.convert_to_tensor(self.experience['s'], dtype=tf.float32) #The current state
+			# print('states', states.shape, states)
 			actions = np.asarray(self.experience['a']) #The action performed (chosen randomly or by net)
+			# print('actions', actions.shape, actions)
 			rewards = np.asarray(self.experience['r']) #The reward got
+			# print('rewards', rewards.shape, rewards)
 			next_states = tf.convert_to_tensor(self.experience['ns']) #The next state
+			# print('next_states', next_states.shape, next_states)
 			dones = np.asarray(self.experience['done']) #State of the game (ended or not)
-			# print(type(next_states), np.shape(next_states), next_states)
-			#value_next = np.max(self.predictTN(next_states),axis=1) #Max next values according to the Target Network
+			# print('dones', dones.shape, dones)
 			value_next = np.max(self.targetNetwork(next_states),axis=1) #Max next values according to the Target Network
-			
-			# print('oj')
-			# print(type(rewards), rewards.shape,rewards)
-			# print(type(value_next), value_next.shape, value_next)
-			actual_values = np.where(dones, rewards, rewards+self.discount_rate*value_next)
+			# print('value_next', value_next.shape, value_next)
+			actual_values = np.where(dones, rewards, rewards+self.gamma*value_next)
+			# print('actual_values', actual_values.shape, actual_values)
 
 			with tf.GradientTape() as tape:
-				# print(type(states), states.shape, states)
 				tape.watch(states)
-				a = self.policyNetwork(states) * tf.one_hot(actions, self.actions)
+				
+				a = self.policyNetwork(states) * tf.one_hot(actions, self.num_actions)
 				selected_action_values = tf.math.reduce_sum(a , axis=1)
-				# print('partial', type(a), a.shape, a)
-				# print('final', type(selected_action_values), selected_action_values.shape, selected_action_values)
+
 				loss = tf.math.reduce_mean(tf.square(actual_values - selected_action_values))
 				tape.watch(loss)
 
 
-			variables = self.policyNetwork.trainable_variables			
+			variables = self.policyNetwork.trainable_variables
 			gradients = tape.gradient(loss, variables)
-			# print('loss', type(loss), loss)
-			# print(type(variables), np.array(variables).shape)
+			print('\n#####\tloss\t#####', loss)
+			# print('variables', type(variables), np.array(variables).shape)
 			# print('wv', tape.watched_variables())
-			# print(type(gradients), np.array(gradients).shape)
+			# print('gradients', type(gradients), np.array(gradients).shape)
 			# print(gradients)
-        
+			# time.sleep(3)
+
 			self.optimizer.apply_gradients(zip(gradients, variables))
 
-			self.counter=0
 			self.experience = {'s': [], 'a': [], 'r': [], 'ns': [], 'done': []}
-
+			self.counter=0
 			return loss		
+
+		if(self.counter>=self.batchsize):
+			self.experience = {'s': [], 'a': [], 'r': [], 'ns': [], 'done': []}
+			self.counter=0
 
 	def predictPN(self, input):
 		return self.policyNetwork(np.atleast_2d(input))
@@ -90,6 +97,8 @@ class Network():
 	
 	def copyNN(self):
 		self.targetNetwork.set_weights(self.policyNetwork.get_weights())
+
+
 
 
 class CalculatorWebService(object):
@@ -107,10 +116,12 @@ class CalculatorWebService(object):
 	def PREDICT_PN(self):
 		msg = cherrypy.request.body.readline().decode("utf-8")
 		input = np.array(msg.split('.')).astype(int)
+		# print('PREDICT')
+		# print(input)
 		output = self.net.predictPN(input)
-		out = '.'.join([str(o) for o in output.numpy()[0]])
-		#out = out.strip()[1:-1]
-		#print('pn', out, np.shape(out))
+		# print('pred net', output)
+		# print('target net', self.net.predictTN(input))
+		out = '/'.join([str(o) for o in output.numpy()[0]])
 		return out
 
 	def PREDICT_TN(self):
@@ -129,31 +140,14 @@ class CalculatorWebService(object):
 		action = int(values[1])
 		nextstate = tf.Variable([np.array(values[2].split('.'), dtype=np.int8)])
 		reward = float(values[3])
-		endstate = bool(values[4])
+		endstate = True if values[4]=='True' else False
 
 		exp = {'s': currentstate, 'a': action, 'r': reward, 'ns': nextstate, 'done': endstate}
 		return exp
 
-	# def GET(self,*path,**query):
-	# 	output = 'Get'
-	# 	return output
-
-	# def POST(self,*path,**query):
-	# 	msg = cherrypy.request.body.read()
-	# 	print(msg)
-	# 	output = 'Post'
-	# 	return output
-
-	# def PUT(self,*path,**query):
-	# 	msg = cherrypy.request.body.read().decode("utf-8") 
-	# 	msg = msg.split('.')
-	# 	result = {'action':msg[4], 'value':[0.35,0]}
-	# 	output = json.dumps(result)
-	# 	return output
-
-	# def DELETE(self,*path,**query):
-	# 	output = 'Get'
-	# 	return output
+	def RESET(self):
+		self.net = Network()
+		print('Reset')
 
 #'request.dispatch': cherrypy.dispatch.MethodDispatcher() => switch from default URL to HTTP compliant approch
 conf = { '/': {	'request.dispatch': cherrypy.dispatch.MethodDispatcher(),

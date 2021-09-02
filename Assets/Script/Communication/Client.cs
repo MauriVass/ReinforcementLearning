@@ -74,10 +74,8 @@ public class Client
         }
         else
         {
-            //print(uwr.downloadHandler.text);
-            var output = Array.ConvertAll(uwr.downloadHandler.text.Split('.'), s => float.Parse(s));
+            var output = Array.ConvertAll(uwr.downloadHandler.text.Split('/'), s => float.Parse(s));
             return output;
-            //Debug.Log("Received: " + uwr.downloadHandler.text);
         }
     }
 
@@ -90,6 +88,37 @@ public class Client
 
         uwr.url = url;
         uwr.method = "COPY_NN";
+        uwr.uploadHandler = new UploadHandlerRaw(null);
+
+        uwr.useHttpContinue = false;
+        uwr.redirectLimit = 0;  // disable redirects
+        uwr.timeout = 60;       // don't make this small, web requests do take some time
+
+        //uwr.downloadHandler = new DownloadHandlerBuffer();
+
+        uwr.SendWebRequest();
+        //yield return uwr.SendWebRequest();
+
+        //Not best solution but with a local server work wery well
+        //also there a no other options: you have to wait the deep neural network output before going on
+        //this allows also to return something (float[], ...)
+        //while (!uwr.isDone) ;
+
+        if (uwr.isNetworkError)
+        {
+            Debug.Log("Error While Sending: " + uwr.error);
+        }
+    }
+
+    public void reset()
+    {
+        //Convert the state to string using . as separator
+        //string data = string.Join(".", state);
+        //byte[] dataToPut = System.Text.Encoding.UTF8.GetBytes(data);
+        UnityWebRequest uwr = new UnityWebRequest();
+
+        uwr.url = url;
+        uwr.method = "RESET";
         uwr.uploadHandler = new UploadHandlerRaw(null);
 
         uwr.useHttpContinue = false;

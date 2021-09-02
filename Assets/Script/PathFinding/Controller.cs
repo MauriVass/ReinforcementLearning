@@ -78,7 +78,7 @@ public class Controller : MonoBehaviour
 
         epsilon = 1f;
         minEplison = 0.1f;
-        epsilonDecay = 0.02f / (n + m);
+        epsilonDecay = 0.05f / (n + m);
         learningRate = 0.75f;
         discountRate = 0.85f;
         //3 times the diagonal (more less) length (sqrt(2)*size ~= 1.4*size)
@@ -93,7 +93,7 @@ public class Controller : MonoBehaviour
             if (canStart)
             {
                 //Change waiting time with the slider at runtime
-                maxTimer = 5.05f - slider.value;
+                maxTimer = 5.3f - slider.value;
 
                 timer += Time.deltaTime;
                 if (!end)
@@ -178,22 +178,24 @@ public class Controller : MonoBehaviour
 
         //1 -> lead to a positive state
         //0 -> lead to a negative state (obstacle, far from objective, ...)
-        if (isSquare)
+        if (true)//Remove false (when there are only 4 input and you want directions instead of obstacles)
         {
-            // up, right, down, left
-            state[0] = checkIndexBoundaries(pos.x, pos.y + 1) && !platforms[(int)pos.x, (int)pos.y + 1].punishmentPoint ? 1 : 0;
-            state[1] = checkIndexBoundaries(pos.x + 1, pos.y) && !platforms[(int)pos.x + 1, (int)pos.y].punishmentPoint ? 1 : 0;
-            state[2] = checkIndexBoundaries(pos.x, pos.y - 1) && !platforms[(int)pos.x, (int)pos.y - 1].punishmentPoint ? 1 : 0;
-            state[3] = checkIndexBoundaries(pos.x - 1, pos.y) && !platforms[(int)pos.x - 1, (int)pos.y].punishmentPoint ? 1 : 0;
-        }
-        else
-        {
-            //TO-DO
-            // up, right-up, right-down, down, left-down, left-up
-            state[0] = checkIndexBoundaries(pos.x, pos.y + 2) ? 1 : 0;
-            state[1] = checkIndexBoundaries(pos.x + 1, pos.y) ? 1 : 0;
-            state[2] = checkIndexBoundaries(pos.x, pos.y - 1) ? 1 : 0;
-            state[3] = checkIndexBoundaries(pos.x - 1, pos.y) ? 1 : 0;
+            if (isSquare)
+            {
+                // up, right, down, left
+                state[0] = checkIndexBoundaries(pos.x, pos.y + 1) && !platforms[(int)pos.x, (int)pos.y + 1].punishmentPoint ? 1 : 0;
+                state[1] = checkIndexBoundaries(pos.x + 1, pos.y) && !platforms[(int)pos.x + 1, (int)pos.y].punishmentPoint ? 1 : 0;
+                state[2] = checkIndexBoundaries(pos.x, pos.y - 1) && !platforms[(int)pos.x, (int)pos.y - 1].punishmentPoint ? 1 : 0;
+                state[3] = checkIndexBoundaries(pos.x - 1, pos.y) && !platforms[(int)pos.x - 1, (int)pos.y].punishmentPoint ? 1 : 0;
+            }
+            else
+            {
+                // up, right-up, right-down, down, left-down, left-up
+                state[0] = checkIndexBoundaries(pos.x, pos.y + 2) ? 1 : 0;
+                state[1] = checkIndexBoundaries(pos.x + 1, pos.y) ? 1 : 0;
+                state[2] = checkIndexBoundaries(pos.x, pos.y - 1) ? 1 : 0;
+                state[3] = checkIndexBoundaries(pos.x - 1, pos.y) ? 1 : 0;
+            }
         }
 
         //Top Down

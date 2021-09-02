@@ -60,7 +60,7 @@ public class AgentDQL : MonoBehaviour
 
 	//For Deep Q-Learning
 	int sizeReplayMemory;
-	int indexExperience;
+	public int indexExperience;
 	Experience[] replayMemory;
 	int batchReplayMemory;
 	List<Experience> batchExperiences;
@@ -68,7 +68,6 @@ public class AgentDQL : MonoBehaviour
 	bool useLocalNN;
 	public NeuralNetwork policyNetwork, targetNetwork;
 	int counterTargetNet, updateTargetNet;
-	float rateAveraging;
 	bool startLearning;
 
 	[HideInInspector]
@@ -77,6 +76,8 @@ public class AgentDQL : MonoBehaviour
 
 	Client client;
 
+	string name_file;
+
 	void Start()
 	{
 		n = controller.n;
@@ -84,7 +85,7 @@ public class AgentDQL : MonoBehaviour
 
 		/*Deep Q-Learning*/
 		//This should be a large number ~10^5
-		sizeReplayMemory = 2000;
+		sizeReplayMemory = 500;
 		indexExperience = 0;
 		//Inputs are:
 		//   adjacent platforms (4 in the case of squares and 6 for the hexagones)
@@ -103,14 +104,15 @@ public class AgentDQL : MonoBehaviour
         else
         {
 			client = new Client();
+			client.reset();
         }
 
 		batchExperiences = new List<Experience>();
-		batchSize = 64;
-		updateTargetNet = 5;
-		rateAveraging = 0.01f;
+		batchSize = 16;
+		updateTargetNet = 15;
 		startLearning = false;
 
+		name_file = "exp" + nInput.ToString() + ".csv";
 		ReadFromFile();
 		if (indexExperience >= sizeReplayMemory)
 			startLearning = true;
@@ -141,7 +143,14 @@ public class AgentDQL : MonoBehaviour
 			float maxValue = -999;
 			float[] currentInput = controller.getCurrentState(nInput, controller.agentPosition);
 			FindMaxValueDQL(currentInput, out action, out maxValue);
-			print("Action Chosen: " + action + " maxValue: " + maxValue);
+
+			string cs = "";
+            for (int i = 0; i < currentInput.Length; i++)
+            {
+				cs += currentInput[i] + ".";
+            }
+			print("S:" + cs + " " + "Act Chos:" + action + " maxVal:" + maxValue);
+			//print("State: " + cs + " " + "Action Chosen: " + action + " maxValue: " + maxValue);
 		}
 
 		controller.steps++;
@@ -181,7 +190,6 @@ public class AgentDQL : MonoBehaviour
 				indexAction = i;
 			}
 		}
-
 		action = controller.isSquare ? ActionSquare.GetVectorByIndex(indexAction) : ActionHex.GetVectorByIndex(indexAction, (int)(controller.agentPosition.y) % 2);
 	}
 
@@ -224,7 +232,7 @@ public class AgentDQL : MonoBehaviour
 				reward = -10;
 			maxNextValue = 0;
 
-			print("Out of B");
+			print("Out of Boudaries");
 		}
 
 		controller.end = controller.end ? controller.end : controller.currentPlatform.CheckGameState();
@@ -234,7 +242,7 @@ public class AgentDQL : MonoBehaviour
 		//Save Experience in the ReplayMemory (also overwritting the existining ones)
 		replayMemory[indexExperience % sizeReplayMemory] = e;
 		indexExperience++;
-		print(e.ToString());
+
 		//Do random actions while the replayMemory is not full
 		if (indexExperience >= sizeReplayMemory && !startLearning)
 		{
@@ -248,11 +256,13 @@ public class AgentDQL : MonoBehaviour
 			//Empty batch experiences
 			batchExperiences.Clear();
 			//Select (different) random Experiences
+			int randExp;//= Random.Range(0, indexExperience > sizeReplayMemory ? sizeReplayMemory - batchSize : indexExperience);
 			while (batchExperiences.Count < batchSize)
 			{
-				int randExp = Random.Range(0, indexExperience > sizeReplayMemory ? sizeReplayMemory : indexExperience);
+				randExp = Random.Range(0, indexExperience > sizeReplayMemory ? sizeReplayMemory : indexExperience);
 				if (!batchExperiences.Contains(replayMemory[randExp]))
 					batchExperiences.Add(replayMemory[randExp]);
+				//randExp++;
 			}
 
 			float error = 0;
@@ -305,6 +315,7 @@ public class AgentDQL : MonoBehaviour
                 }
                 else
                 {
+					print("Copying Weigths");
 					client.copyNN();
                 }
 				counterTargetNet = 0;
@@ -315,7 +326,7 @@ public class AgentDQL : MonoBehaviour
 
 	void SaveToFile()
 	{
-		using (StreamWriter sw = File.CreateText("Assets/Script/PathFinding/Experiences/exp.csv"))
+		using (StreamWriter sw = File.CreateText("Assets/Script/PathFinding/Experiences/"+name_file))
 		{
 			foreach (Experience e in replayMemory)
 			{
@@ -327,13 +338,17 @@ public class AgentDQL : MonoBehaviour
 	}
 	void ReadFromFile()
 	{
-		using (StreamReader sr = File.OpenText("Assets/Script/PathFinding/Experiences/exp.csv"))
+		string file_location = "Assets/Script/PathFinding/Experiences/" + name_file;
+		if (File.Exists(file_location))
 		{
-			string s;
-			while ((s = sr.ReadLine()) != null)
+			using (StreamReader sr = File.OpenText(file_location))
 			{
-				replayMemory[indexExperience % sizeReplayMemory] = Experience.FromString(s);
-				indexExperience++;
+				string s;
+				while ((s = sr.ReadLine()) != null)
+				{
+					replayMemory[indexExperience % sizeReplayMemory] = Experience.FromString(s);
+					indexExperience++;
+				}
 			}
 		}
 	}
