@@ -47,6 +47,7 @@ public class Platform : MonoBehaviour
         minReward = 0.5f * r;
         punishment = -1 * r;
         //Larger is the platform size lower should be this value
+        //Negative reward for each step -> minimize the steps required to reach the goal point
         empty = -0.1f * r;
 
         if (maxRewardPoint)
@@ -100,10 +101,11 @@ public class Platform : MonoBehaviour
             text[i].fontSize = 8;
         }
     }
-    
+
     //Not best solution
     void LateUpdate()
     {
+        int c = 0;
         //Update text values
         if (!punishmentPoint && !maxRewardPoint)
         {
@@ -111,9 +113,12 @@ public class Platform : MonoBehaviour
             {
                 if (controller.DQLearning)
                 {
-                    agentDQL.policyNetwork.StepsForward(new float[] { point.y * agentDQL.n + point.x });
-                    agentDQL.targetNetwork.StepsForward(new float[] { point.y * agentDQL.n + point.x });
-                    text[i].text = "P: " + agentDQL.policyNetwork.output[i].ToString("F2") + "\nT: " + agentDQL.targetNetwork.output[i].ToString("F2");
+                    if (agentDQL.policyNetwork != null)
+                    {
+                        //agentDQL.policyNetwork.StepsForward(new float[] { point.y * agentDQL.n + point.x });
+                        //agentDQL.targetNetwork.StepsForward(new float[] { point.y * agentDQL.n + point.x });
+                        //text[i].text = "P: " + agentDQL.policyNetwork.output[i].ToString("F2") + "\nT: " + agentDQL.targetNetwork.output[i].ToString("F2");
+                    }
                 }
                 else
                     text[i].text = (agentQTable.qTable[(int)(point.y * controller.n + point.x), i]).ToString("F2");
@@ -151,14 +156,14 @@ public class Platform : MonoBehaviour
     {
         punishmentPoint = true;
         Visualize();
-        //This make invisible the canvas in order to avoid visualzing the Q-Table value 
+        //This make invisible the canvas in order to avoid visualzing the Q-Table value
         canvas.enabled = false;
     }
     public void SetMaxRewardPoint()
     {
         maxRewardPoint = true;
         Visualize();
-        //This make invisible the canvas in order to avoid visualzing the Q-Table value 
+        //This make invisible the canvas in order to avoid visualzing the Q-Table value
         canvas.enabled = false;
     }
     public void SetMinRewardPoint()
@@ -171,7 +176,7 @@ public class Platform : MonoBehaviour
         startingPoint = true;
         Visualize();
     }
-    
+
     public void DisableMinReward()
     {
         if (minRewardPoint)

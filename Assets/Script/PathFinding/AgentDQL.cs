@@ -1,234 +1,355 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class Experience
 {
-    private int state;
-    private int action;
-    private float reward;
-    private int nextState;
-    private bool endState;
+	private float[] state;
+	private int action;
+	private float reward;
+	private float[] nextState;
+	private bool endState;
 
-    public Experience(int state, int action, float reward, int nextState, bool endState)
-    {
-        this.state = state;
-        this.action = action;
-        this.reward = reward;
-        this.nextState = nextState;
-        this.endState = endState;
-    }
+	public Experience(float[] state, int action, float reward, float[] nextState, bool endState)
+	{
+		this.state = state;
+		this.action = action;
+		this.reward = reward;
+		this.nextState = nextState;
+		this.endState = endState;
+	}
 
-    public int State { get => state; set => state = value; }
-    public int Action { get => action; set => action = value; }
-    public int NextState { get => nextState; set => nextState = value; }
-    public float Reward { get => reward; set => reward = value; }
-    public bool EndState { get => endState; set => endState = value; }
+	public float[] State { get => state; set => state = value; }
+	public int Action { get => action; set => action = value; }
+	public float[] NextState { get => nextState; set => nextState = value; }
+	public float Reward { get => reward; set => reward = value; }
+	public bool EndState { get => endState; set => endState = value; }
+
+	public string ToString()
+	{
+		string output = "";
+
+		output += string.Join(".",state) + ",";
+		output += action + ",";
+		output += string.Join(".", nextState) + ",";
+		output += reward + ",";
+		output += endState;
+
+		return output;
+	}
+	public static Experience FromString(string text)
+	{
+		string[] values = text.Split(',');
+
+		float[] state = Array.ConvertAll(values[0].Split('.'), s => float.Parse(s));
+		int action = int.Parse(values[1]);
+		float[] nextstate = Array.ConvertAll(values[2].Split('.'), s => float.Parse(s));
+		float reward = float.Parse(values[3]);
+		bool endstate = bool.Parse(values[4]);
+		Experience e = new Experience(state,action,reward,nextstate, endstate);
+		return e;
+	}
 }
 
 public class AgentDQL : MonoBehaviour
 {
-    public Controller controller;
+	public Controller controller;
 
-    //For Deep Q-Learning
-    int sizeReplayMemory;
-    int indexExperience;
-    Experience[] replayMemory;
-    int batchReplayMemory;
-    List<Experience> batchExperiences;
-    public NeuralNetwork policyNetwork, targetNetwork;
-    int counterTargetNet, updateTargetNet;
-    float rateAveraging;
-    bool startLearning;
+	//For Deep Q-Learning
+	int sizeReplayMemory;
+	public int indexExperience;
+	Experience[] replayMemory;
+	int batchReplayMemory;
+	List<Experience> batchExperiences;
+	int batchSize;
+	bool useLocalNN;
+	public NeuralNetwork policyNetwork, targetNetwork;
+	int counterTargetNet, updateTargetNet;
+	bool startLearning;
 
-    [HideInInspector]
-    public int n, m;
+	[HideInInspector]
+	public int n, m;
+	int nInput;
 
-    void Start()
-    {
-        n = controller.n;
-        m = controller.m;
+	Client client;
 
-        //Deep Q-Learning
-        sizeReplayMemory = 50;
-        indexExperience = 0;
-        replayMemory = new Experience[sizeReplayMemory];
-        policyNetwork = new NeuralNetwork(1, 2, 4, controller.nActions, 0.45f, 0.6f);
-        targetNetwork = new NeuralNetwork(policyNetwork);
-        targetNetwork.CopyNN(policyNetwork.hiddenWeights, policyNetwork.outputWeights);
-        batchExperiences = new List<Experience>();
-        updateTargetNet = 15;
-        rateAveraging = 0.01f;
-        startLearning = false;
-    }
+	string name_file;
 
-    //Vector2 ChooseActionDQL()
-    //{
-    //    float n = Random.Range(0f, 1f);
-    //    Vector2 action = new Vector2(-1, -1);
-    //    if (n < epsilon)
-    //    {
-    //        action = Action.ChooseRandomAction(isSquare);
-    //        if(startLearning)
-    //            epsilon = epsilon > minEplison ? epsilon - epsilonDecay : minEplison;
-    //        print("Random Action Chosen: " + action);
-    //    }
-    //    else
-    //    {
-    //        float maxValue = -999;
-    //        FindMaxValueDQL((int)(agentPosition.x + agentPosition.y * n), out action, out maxValue);
-    //        print("Action Chosen: " + action + " maxValue: " + maxValue);
-    //    }
+	void Start()
+	{
+		n = controller.n;
+		m = controller.m;
 
-    //    steps++;
-    //    if (steps > maxSteps)
-    //    {
-    //        end = true;
-    //    }
-    //    return action;
-    //}
+		/*Deep Q-Learning*/
+		//This should be a large number ~10^5
+		sizeReplayMemory = 500;
+		indexExperience = 0;
+		//Inputs are:
+		//   adjacent platforms (4 in the case of squares and 6 for the hexagones)
+		//   4 binary values to understand the target position wrt the actor position
+		nInput = controller.nActions + 4;
+		replayMemory = new Experience[sizeReplayMemory];
 
-    //void FindMaxValueDQL(int index, out Vector2 action, out float maxValue)
-    //{
-    //    maxValue = -999;
-    //    int indexAction = -1;
+		//Use local NN (true) or remote one (false)(remember to activate server.py script!)
+		useLocalNN = false;
+		if (useLocalNN)
+		{
+			policyNetwork = new NeuralNetwork(nInput, 1, 64, controller.nActions, 0.01f, 0.9f);
+			targetNetwork = new NeuralNetwork(policyNetwork);
+			//targetNetwork.CopyNN(policyNetwork.hiddenWeights, policyNetwork.outputWeights);
+        }
+        else
+        {
+			client = new Client();
+			client.reset();
+        }
 
-    //    //Action future that maximize the reward
-    //    Vector2 maxValueAction = new Vector2(-1, -1);
+		batchExperiences = new List<Experience>();
+		batchSize = 16;
+		updateTargetNet = 15;
+		startLearning = false;
 
-    //    policyNetwork.StepsForward(new float[] { index });
-    //    float[] output = policyNetwork.getOutput();
-    //    for (int i = 0; i < nActions; i++)
-    //    {
-    //        if (maxValue <  output[i])
-    //        {
-    //            maxValue = output[i];
-    //            indexAction = i;
-    //        }
-    //    }
+		name_file = "exp" + nInput.ToString() + ".csv";
+		ReadFromFile();
+		if (indexExperience >= sizeReplayMemory)
+			startLearning = true;
 
-    //    action = Action.GetVectorByIndex(indexAction, isSquare);
-    //}
+	}
 
-    //void PerformActionDeepQ(Vector2 action)
-    //{
+	private void Update()
+	{
+		if (Input.GetKeyDown(KeyCode.E))
+		{
+			SaveToFile();
+			Debug.LogError("Wrote on file");
+		}
+	}
+	public Vector2 ChooseAction()
+	{
+		float n = Random.Range(0f, 1f);
+		Vector2 action = new Vector2(-1, -1);
+		if (n < controller.epsilon)
+		{
+			action = controller.isSquare ? ActionSquare.ChooseRandomAction() : ActionHex.ChooseRandomAction((int)(controller.agentPosition.y) % 2);
+			if (startLearning)
+				controller.epsilon = controller.epsilon > controller.minEplison ? controller.epsilon - controller.epsilonDecay : controller.minEplison;
+			print("Random Action Chosen: " + action);
+		}
+		else
+		{
+			float maxValue = -999;
+			float[] currentInput = controller.getCurrentState(nInput, controller.agentPosition);
+			FindMaxValueDQL(currentInput, out action, out maxValue);
 
-    //    int indexAction = Action.GetIndexByVector(action, isSquare);
-    //    float reward;
-    //    float maxNextValue;
+			string cs = "";
+            for (int i = 0; i < currentInput.Length; i++)
+            {
+				cs += currentInput[i] + ".";
+            }
+			print("S:" + cs + " " + "Act Chos:" + action + " maxVal:" + maxValue);
+			//print("State: " + cs + " " + "Action Chosen: " + action + " maxValue: " + maxValue);
+		}
 
-    //    int curretStateIndex = (int)(agentPosition.x + agentPosition.y * n);
-    //    agentPosition += action;
-    //    int nextStateIndex = (int)(agentPosition.x + agentPosition.y * n);
+		controller.steps++;
+		if (controller.steps > controller.maxSteps)
+		{
+			controller.end = true;
+		}
+		return action;
+	}
 
-    //    int x = (int)agentPosition.x;
-    //    int y = (int)agentPosition.y;
-    //    if (checkIndexBoundaries(x, y))
-    //    {
-    //        previousPlatform = currentPlatform;
-    //        currentPlatform = platforms[x, y];
+	void FindMaxValueDQL(float[] input, out Vector2 action, out float maxValue)
+	{
+		maxValue = -999;
+		int indexAction = -1;
 
-    //        Vector3 pos = currentPlatform.transform.position + Vector3.back;
-    //        agent.transform.position = pos;
+		//Action future that maximize the reward
+		Vector2 maxValueAction = new Vector2(-1, -1);
 
-    //        reward = currentPlatform.reward;
+		float[] output;
+		if (useLocalNN)
+		{
+			///Local Neural Network
+			policyNetwork.StepsForward(input);
+			output = policyNetwork.getOutput();
+		}
+		else
+		{
+			///Remote Neural Network
+			output = client.predict(input,true);
+		}
 
-    //        //The value 'any' is not important
-    //        Vector2 any;
-    //        FindMaxValue(nextStateIndex, out any, out maxNextValue);
-    //    }
-    //    else
-    //    {
-    //        //Out of the platform boundaries
-    //        end = true;
+		for (int i = 0; i < controller.nActions; i++)
+		{
+			if (maxValue < output[i])
+			{
+				maxValue = output[i];
+				indexAction = i;
+			}
+		}
+		action = controller.isSquare ? ActionSquare.GetVectorByIndex(indexAction) : ActionHex.GetVectorByIndex(indexAction, (int)(controller.agentPosition.y) % 2);
+	}
 
-    //        if (DQLearning)
-    //            reward = -1;
-    //        else
-    //            reward = -10;
-    //        maxNextValue = 0;
+	public void PerformAction(Vector2 action)
+	{
+		Vector2 agentPos = controller.agentPosition;
+		int indexAction = -1;
+		indexAction = controller.isSquare ? ActionSquare.GetIndexByVector(action) : ActionHex.GetIndexByVector(action, (int)(agentPos.y) % 2);
+		float reward;
+		float maxNextValue;
 
-    //        print("Out of B");
-    //    }
+		float[] currentState = controller.getCurrentState(nInput, controller.agentPosition);
+		controller.agentPosition += action;
+		float[] nextState = controller.getCurrentState(nInput, controller.agentPosition);
 
-    //    //Create new Experience
-    //    Experience e = new Experience(curretStateIndex,indexAction,reward,nextStateIndex,end);
-    //    //Save Experience in the ReplayMemory (also overwritting the existining ones)
-    //    replayMemory[indexExperience % sizeReplayMemory] = e;
-    //    indexExperience++;
+		int x = (int)controller.agentPosition.x;
+		int y = (int)controller.agentPosition.y;
+		if (controller.checkIndexBoundaries(x, y))
+		{
+			controller.previousPlatform = controller.currentPlatform;
+			controller.currentPlatform = controller.platforms[x, y];
 
-    //    //Do random actions while the replayMemory is not full
-    //    if (indexExperience >= sizeReplayMemory)
-    //    {
-    //        startLearning = true;
-    //    }
-    //    if (startLearning) { 
-    //        //Choose a random batch size
-    //        batchReplayMemory = Random.Range(sizeReplayMemory/10, indexExperience > sizeReplayMemory ? sizeReplayMemory : indexExperience);
-    //        //Empty batch experiences
-    //        batchExperiences.Clear();
-    //        //Select (different) random Experiences
-    //        while (batchExperiences.Count < batchReplayMemory)
-    //        {
-    //            int randExp = Random.Range(0, indexExperience > sizeReplayMemory ? sizeReplayMemory : indexExperience);
-    //            if (!batchExperiences.Contains(replayMemory[randExp]))
-    //                batchExperiences.Add(replayMemory[randExp]);
-    //        }
+			Vector3 pos = controller.currentPlatform.transform.position + Vector3.back;
+			controller.agent.transform.position = pos;
 
-    //        float error = 0;
-    //        for (int i = 0; i < batchExperiences.Count; i++)
-    //        {
-    //            //Pass the current state through the Policy Network
-    //            float[] currentState = new float[] { batchExperiences[i].State };
-    //            policyNetwork.StepsForward(currentState);
-    //            //Get the output given the choosen Action
-    //            int currentAction = batchExperiences[i].Action;
-    //            float currentQValue = policyNetwork.GetOutputByActionIndex(currentAction);
+			reward = controller.currentPlatform.reward;
 
-    //            //Pass the next state through the Target Network
-    //            float[] nextState = new float[] { batchExperiences[i].NextState };
-    //            targetNetwork.StepsForward(nextState);
-    //            //Get the max output
-    //            float nextQValue = targetNetwork.GetMaxOutput();
+			//The value 'any' is not important
+			Vector2 any;
+			FindMaxValueDQL(nextState, out any, out maxNextValue);
+		}
+		else
+		{
+			//Out of the platform boundaries
+			controller.end = true;
 
-    //            //Calculate the loss between the choosen Action and the best one
-    //            float theta = batchExperiences[i].EndState ? batchExperiences[i].Reward : batchExperiences[i].Reward + learningRate * nextQValue;
-    //            float loss = 0.5f * Mathf.Pow(theta - currentQValue, 2);
-    //            //Calculate Error's mean
-    //            error += loss / batchExperiences.Count;
+			if (controller.DQLearning)
+				reward = -1;
+			else
+				reward = -10;
+			maxNextValue = 0;
+
+			print("Out of Boudaries");
+		}
+
+		controller.end = controller.end ? controller.end : controller.currentPlatform.CheckGameState();
+
+		//Create new Experience
+		Experience e = new Experience(currentState, indexAction, reward, nextState, controller.end);
+		//Save Experience in the ReplayMemory (also overwritting the existining ones)
+		replayMemory[indexExperience % sizeReplayMemory] = e;
+		indexExperience++;
+
+		//Do random actions while the replayMemory is not full
+		if (indexExperience >= sizeReplayMemory && !startLearning)
+		{
+			startLearning = true;
+			SaveToFile();
+		}
+		if (startLearning)
+		{
+			//Choose a random batch size (avoid takeing the last experiences)
+			//batchReplayMemory = Random.Range(sizeReplayMemory/10, indexExperience > sizeReplayMemory ? sizeReplayMemory : indexExperience);
+			//Empty batch experiences
+			batchExperiences.Clear();
+			//Select (different) random Experiences
+			int randExp;//= Random.Range(0, indexExperience > sizeReplayMemory ? sizeReplayMemory - batchSize : indexExperience);
+			while (batchExperiences.Count < batchSize)
+			{
+				randExp = Random.Range(0, indexExperience > sizeReplayMemory ? sizeReplayMemory : indexExperience);
+				if (!batchExperiences.Contains(replayMemory[randExp]))
+					batchExperiences.Add(replayMemory[randExp]);
+				//randExp++;
+			}
+
+			float error = 0;
+			for (int i = 0; i < batchExperiences.Count; i++)
+			{
+				if (useLocalNN)
+				{
+					//Pass the current state through the Policy Network
+					currentState = batchExperiences[i].State;
+					policyNetwork.StepsForward(currentState);
+					//Get the output given the choosen Action
+					int currentAction = batchExperiences[i].Action;
+					float currentQValue = policyNetwork.GetOutputByActionIndex(currentAction);
+
+					//Pass the next state through the Target Network
+					nextState = batchExperiences[i].NextState;
+					targetNetwork.StepsForward(nextState);
+					//Get the max output
+					float nextQValue = targetNetwork.GetMaxOutput();
+
+					//Calculate the loss between the choosen Action and the best one
+					float theta = batchExperiences[i].EndState ? batchExperiences[i].Reward : batchExperiences[i].Reward + controller.discountRate * nextQValue;
+					float loss = 0.5f * Mathf.Pow(theta - currentQValue, 2) / batchExperiences.Count;
+					error += loss;
+
+					//BackPropagate error and update weights
+					policyNetwork.StepsBackward(targetNetwork.getOutput());//targetNetwork.getOutput()
+				}
+				else
+				{
+					client.fit(batchExperiences[i]);
+				}
+			}
+
+			//Upadate Target Network weights
+			counterTargetNet++;
+			if (counterTargetNet > updateTargetNet && startLearning)
+			{
+				if (useLocalNN)
+				{
+					//Update Target Net weights with the Policy Net ones
+					//Instead of changing each weights and biases
+					//It is faster (and the same) to make the 2 Nets equals
+					//DO NOT USE
+					//targetNetwork = policyNetwork;
+
+					//It seem to give problem with the method above, so use this method
+					targetNetwork.CopyNN(policyNetwork.hiddenWeights, policyNetwork.outputWeights);
+
+                }
+                else
+                {
+					print("Copying Weigths");
+					client.copyNN();
+                }
+				counterTargetNet = 0;
+			}
+		}
+	}
 
 
-    //            //Calculate delta loss for backpropagation w.r.t currentQValue
-    //            float deltaLoss = (theta - currentQValue);
-
-    //            Debug.LogWarning("Loss: " + loss + " deltaLoss: " + deltaLoss);
-
-    //            for (int j = 0; j < 4; j++)
-    //            {
-    //                Debug.LogWarning("Actual: " + policyNetwork.getOutput()[j] + " Target: " + targetNetwork.getOutput()[j] + " diff: " + (targetNetwork.getOutput()[j]-policyNetwork.getOutput()[j]));
-    //            }
-
-    //            //BackPropagate error and update weights
-    //            policyNetwork.StepsBackward(targetNetwork.getOutput(), deltaLoss);//targetNetwork.getOutput()
-    //        }
-
-    //        counterTargetNet++;
-    //        if (counterTargetNet > updateTargetNet && startLearning)
-    //        {
-    //            //Update Target Net weights with the Policy Net ones
-    //            //Instead of changing each weights and biases
-    //            //It is faster (and the same) to make the 2 Nets equals
-    //            //DO NOT USE
-    //            //targetNetwork = policyNetwork;
-
-    //            //It seem to give problem with the method above, so use this method
-    //            targetNetwork.CopyNN(policyNetwork.hiddenWeights,policyNetwork.outputWeights);
-
-    //            counterTargetNet = 0;
-    //        }
-    //    }
-
-    //    end = end ? end : currentPlatform.CheckGameState();
-    //    //print(oldQvalue + " " + qTable[curretStateIndex, indexAction]);
-    //}
+	void SaveToFile()
+	{
+		using (StreamWriter sw = File.CreateText("Assets/Script/PathFinding/Experiences/"+name_file))
+		{
+			foreach (Experience e in replayMemory)
+			{
+				if (e == null)
+					break;
+				sw.WriteLine(e.ToString());
+			}
+		}
+	}
+	void ReadFromFile()
+	{
+		string file_location = "Assets/Script/PathFinding/Experiences/" + name_file;
+		if (File.Exists(file_location))
+		{
+			using (StreamReader sr = File.OpenText(file_location))
+			{
+				string s;
+				while ((s = sr.ReadLine()) != null)
+				{
+					replayMemory[indexExperience % sizeReplayMemory] = Experience.FromString(s);
+					indexExperience++;
+				}
+			}
+		}
+	}
 }

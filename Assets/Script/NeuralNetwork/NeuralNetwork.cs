@@ -171,21 +171,21 @@ public class NeuralNetwork
         }
         ForwardPropagate(outputWeights, hiddenLayer[hiddenLayer.Length - 1], output, true);
     }
-    public void StepsBackward(float[] targetOutput, float loss = 1)
+    public void StepsBackward(float[] targetOutput)
     {
         //For Sine test
         Func<float, float> activationFunctionDevOutputL = new Func<float, float>(SigmoidFunctionDev);
         Func<float, float> activationFunctionDevHiddenL = new Func<float, float>(SigmoidFunctionDev);
 
         //For Path Finding test (Deep Q Learning)
-        //Func<float, float> activationFunctionDevOutputL = new Func<float, float>(LinearDev);
+        //Func<float, float> activationFunctionDevOutputL = new Func<float, float>(RELUdev);
         //Func<float, float> activationFunctionDevHiddenL = new Func<float, float>(RELUdev);
 
         error = 0;
         //Calculate errors
         for (int i = 0; i < output.Length; i++)
         {
-            outputDelta[i] = (targetOutput[i] - output[i]) * activationFunctionDevOutputL(output[i]) * loss;
+            outputDelta[i] = (targetOutput[i] - output[i]) * activationFunctionDevOutputL(output[i]);
 
             //Calculate quadratic error
             error += 0.5f * Mathf.Pow(targetOutput[i] - output[i], 2);
@@ -332,6 +332,7 @@ public class NeuralNetwork
     }
     public float[] getOutput()
     {
+        //Create a copy and return it
         float[] outp = new float[nOutput];
         for (int i = 0; i < nOutput; i++)
         {
@@ -352,7 +353,7 @@ public class NeuralNetwork
                 }
             }
         }
-        Debug.LogError("Changed");
+        //Debug.LogError("Changed");
 
         for (int i = 0; i < _outputWeight.Length; i++)
         {

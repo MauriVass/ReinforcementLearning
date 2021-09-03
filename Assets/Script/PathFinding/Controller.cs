@@ -46,7 +46,8 @@ public class Controller : MonoBehaviour
     float timer, maxTimer;
 
     //Used to start learning after game started (Press key S)
-    bool canStart;
+    //todo
+    bool canStart = true;
 
     void Start()
     {
@@ -63,19 +64,25 @@ public class Controller : MonoBehaviour
         DQLearning = ManagerScenes.isDeepQN;
         isSquare = ManagerScenes.isSquare;
 
-        if (!DQLearning)
+        if (!DQLearning){
             agentQTable = agent.GetComponent<AgentQTable>();
-        else agentDQL = agent.GetComponent<AgentDQL>();
-        agentQTable.controller = this;
+            agentQTable.enabled = true;
+            agentQTable.controller = this;
+        }
+        else {
+            agentDQL = agent.GetComponent<AgentDQL>();
+            agentDQL.enabled = true;
+            agentDQL.controller = this;
+        }
 
 
         epsilon = 1f;
         minEplison = 0.1f;
-        epsilonDecay = 0.01f / (n + m) / 2;
+        epsilonDecay = 0.05f / (n + m);
         learningRate = 0.75f;
         discountRate = 0.85f;
         //3 times the diagonal (more less) length (sqrt(2)*size ~= 1.4*size)
-        maxSteps = (n + m) / 2 * 4;
+        maxSteps = (int) Mathf.Sqrt( (n*n + m*m) ) * 3 ;
         nActions = isSquare ? ActionSquare.nAction : ActionHex.nAction;
 
         Restart();
@@ -86,7 +93,7 @@ public class Controller : MonoBehaviour
             if (canStart)
             {
                 //Change waiting time with the slider at runtime
-                maxTimer = 5.1f - slider.value;
+                maxTimer = 5.3f - slider.value;
 
                 timer += Time.deltaTime;
                 if (!end)
@@ -98,8 +105,8 @@ public class Controller : MonoBehaviour
                         if (DQLearning)
                         {
                             //Path Finding with deep network
-                            action = agentQTable.ChooseAction();
-                            agentQTable.PerformAction(action);
+                            action = agentDQL.ChooseAction();
+                            agentDQL.PerformAction(action);
                         }
                         else
                         {
@@ -150,7 +157,7 @@ public class Controller : MonoBehaviour
         epoch++;
     }
 
-    public bool checkIndexBoundaries(int x, int y)
+    public bool checkIndexBoundaries(float x, float y)
     {
         if (x >= 0 && x < n && y >= 0 && y < m)
             return true;
@@ -162,6 +169,48 @@ public class Controller : MonoBehaviour
         agentPosition += action;
         Platform platform = platforms[(int)agentPosition.x, (int)agentPosition.y];
         end = platform.CheckGameState();
+    }
+
+
+    public float[] getCurrentState(int nInput, Vector2 pos)
+    {
+        float[] state = new float[nInput];
+
+        //1 -> lead to a positive state
+        //0 -> lead to a negative state (obstacle, far from objective, ...)
+        if (true)//Remove false (when there are only 4 input and you want directions instead of obstacles)
+        {
+            if (isSquare)
+            {
+                // up, right, down, left
+                state[0] = checkIndexBoundaries(pos.x, pos.y + 1) && !platforms[(int)pos.x, (int)pos.y + 1].punishmentPoint ? 1 : 0;
+                state[1] = checkIndexBoundaries(pos.x + 1, pos.y) && !platforms[(int)pos.x + 1, (int)pos.y].punishmentPoint ? 1 : 0;
+                state[2] = checkIndexBoundaries(pos.x, pos.y - 1) && !platforms[(int)pos.x, (int)pos.y - 1].punishmentPoint ? 1 : 0;
+                state[3] = checkIndexBoundaries(pos.x - 1, pos.y) && !platforms[(int)pos.x - 1, (int)pos.y].punishmentPoint ? 1 : 0;
+            }
+            else
+            {
+                // up, right-up, right-down, down, left-down, left-up
+                state[0] = checkIndexBoundaries(pos.x, pos.y + 2) ? 1 : 0;
+                state[1] = checkIndexBoundaries(pos.x + 1, pos.y) ? 1 : 0;
+                state[2] = checkIndexBoundaries(pos.x, pos.y - 1) ? 1 : 0;
+                state[3] = checkIndexBoundaries(pos.x - 1, pos.y) ? 1 : 0;
+            }
+        }
+
+        //Top Down
+        if (maxRewardPlatform.point.y > pos.y)
+            state[nInput - 4] = 1;
+        else if (maxRewardPlatform.point.y < pos.y) state[nInput - 2] = 1;
+        //otherwise both state[nInput-4] and state[nInput-2] are 0 (default value)
+
+        //Right left
+        if (maxRewardPlatform.point.x > pos.x)
+            state[nInput - 3] = 1;
+        else if (maxRewardPlatform.point.x < pos.x) state[nInput - 1] = 1;
+        //otherwise both state[nInput-3] and state[nInput-1] are 0 (default value)
+
+        return state;
     }
 
 }

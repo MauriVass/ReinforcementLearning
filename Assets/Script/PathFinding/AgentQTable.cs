@@ -74,6 +74,7 @@ static class ActionHex
     }
 
     //'remainder' is the reminder of the division of the y position by 2 (r=y%2)
+    //used to understand if the y position is even or odd
     static public Vector2 GetVectorByIndex(int index, int remainder)
     {
         Vector2 r = new Vector2(-1, -1);
@@ -127,7 +128,7 @@ public class AgentQTable : MonoBehaviour
     public Controller controller;
 
     //Q-Table with first index the length of the states (n*m) and second index the possible actions (Up,Right,Down,Left)
-    //At the beginning it is initialized to zero 
+    //At the beginning it is initialized to zero
     public float[,] qTable;
 
     int n, m;
@@ -136,7 +137,7 @@ public class AgentQTable : MonoBehaviour
     {
         n = controller.n;
         m = controller.m;
-        //Create QTable: rows are the states (n * m) and columns are the actions
+        //Create QTable: rows are the states (n * m) and columns are the actions (4 or 6)
         qTable = new float[n * m, controller.nActions];
     }
 
