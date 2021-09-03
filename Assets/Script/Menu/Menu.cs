@@ -46,8 +46,8 @@ public class Menu : MonoBehaviour
             buttonMode[0].GetComponent<Image>().color = new Color32(0, 183, 255, 255);
         else
             buttonMode[1].GetComponent<Image>().color = new Color32(0, 183, 255, 255);
-        //Todo
-        ManagerScenes.isDeepQN = !value;
+
+        ManagerScenes.isDeepQN = value;
     }
 
     public void SetX()
