@@ -6,10 +6,10 @@ import tensorflow as tf
 import time
 
 class Network():
-	def __init__(self):
-		self.num_actions = 4
-		#4 adjacent blocks + 4 reward point directions
-		self.num_inputs = 4 + 4
+	def __init__(self,num_actions):
+		self.num_actions = num_actions
+		#4/6 adjacent blocks + 4 reward point directions
+		self.num_inputs = num_actions + 4
 		self.batchsize = 16
 		self.discount_rate = 0.75
 		self.lr = 0.01
@@ -105,8 +105,7 @@ class CalculatorWebService(object):
 	#Required to be accessable online
 	exposed=True
 
-	def __init__(self):
-		self.net = Network()
+	# def __init__(self):
 
 	def FIT(self):
 		msg = cherrypy.request.body.readline().decode("utf-8")
@@ -146,7 +145,10 @@ class CalculatorWebService(object):
 		return exp
 
 	def RESET(self):
-		self.net = Network()
+		msg = cherrypy.request.body.readline().decode("utf-8")
+		input = int(msg) #np.array(msg.split('.')).astype(int)
+		print(input)
+		self.net = Network(input)
 		print('Reset')
 
 #'request.dispatch': cherrypy.dispatch.MethodDispatcher() => switch from default URL to HTTP compliant approch

@@ -85,7 +85,7 @@ public class AgentDQL : MonoBehaviour
 
 		/*Deep Q-Learning*/
 		//This should be a large number ~10^5
-		sizeReplayMemory = 500;
+		sizeReplayMemory = 1200;
 		indexExperience = 0;
 		//Inputs are:
 		//   adjacent platforms (4 in the case of squares and 6 for the hexagones)
@@ -104,7 +104,7 @@ public class AgentDQL : MonoBehaviour
         else
         {
 			client = new Client();
-			client.reset();
+			client.reset(controller.nActions);
         }
 
 		batchExperiences = new List<Experience>();
@@ -112,7 +112,7 @@ public class AgentDQL : MonoBehaviour
 		updateTargetNet = 15;
 		startLearning = false;
 
-		name_file = "exp" + nInput.ToString() + ".csv";
+		name_file = "exp" + nInput.ToString() + "_" + controller.nActions.ToString() + ".csv";
 		ReadFromFile();
 		if (indexExperience >= sizeReplayMemory)
 			startLearning = true;
@@ -149,7 +149,8 @@ public class AgentDQL : MonoBehaviour
             {
 				cs += currentInput[i] + ".";
             }
-			print("S:" + cs + " " + "Act Chos:" + action + " maxVal:" + maxValue);
+
+			print("S:" + cs + " " + "Act Chos:" + action + " maxVal:" + maxValue.ToString("F3") );
 			//print("State: " + cs + " " + "Action Chosen: " + action + " maxValue: " + maxValue);
 		}
 

@@ -110,16 +110,17 @@ public class Client
         }
     }
 
-    public void reset()
+    public void reset(int nActions)
     {
         //Convert the state to string using . as separator
         //string data = string.Join(".", state);
         //byte[] dataToPut = System.Text.Encoding.UTF8.GetBytes(data);
         UnityWebRequest uwr = new UnityWebRequest();
+        byte[] dataToPut = System.Text.Encoding.UTF8.GetBytes(nActions.ToString());
 
         uwr.url = url;
         uwr.method = "RESET";
-        uwr.uploadHandler = new UploadHandlerRaw(null);
+        uwr.uploadHandler = new UploadHandlerRaw(dataToPut);
 
         uwr.useHttpContinue = false;
         uwr.redirectLimit = 0;  // disable redirects
